@@ -1,0 +1,474 @@
+#Homework SPEI a.a. 2023-2024
+#Marco Caurla - 236704
+
+
+
+# ESERCIZIO 1 -----------------------
+
+#Introduzione
+x = c(150:189) #crea un vettore x contenente i numeri 150,151,...,188,189
+alpha = -90; beta = 0.8 #definizione di alpha e beta
+ym = alpha + (beta*x) #vettore contenente i valori alpha+(beta*x)
+set.seed(236704) #innesco generatore di numeri con numero di matricola
+e = rnorm(40, mean = 0, sd = 5) #campionamento di 40 valori da N(0,5^2)
+y = ym+e #vettore dei valori osservati
+cor(x,y) #correlazione tra x e y con R
+plot(x,y) #scatterplot
+
+# Modello di regressione lineare y = alpha + beta(x)
+modello = lm(y ~ x) #modello di regressione lineare
+summary(modello) #sommario del modello di regressione lineare per trovare alpha
+#(-106.16199) e beta (0.89385)
+plot(x,y); abline(modello) #grafico con anche la retta di regressione
+Ymedia = mean(y) #valore medio di Y
+Yprevista = modello$fitted.values #valore previsto di Y per ogni X
+TSS = sum((y-Ymedia)^2) #Total sum of squares
+SSR = sum((Yprevista-Ymedia)^2) #Somma dei quadrati della regressione
+SSE = sum((y-Yprevista)^2)#Sum of square error
+s = sqrt(SSE/(length(y)-2)) #Residual standard error
+s2 = s^2 #varianza condizionata
+R2 = (TSS-SSE)/(TSS) #R^2
+rbind(TSS,SSR,SSE,s,s2,R2) # Creo matrice riassuntiva
+anova(modello) #Analizzo il modello attraverso l'utilizzo della varianza
+seb = s/(sqrt(sum((x-mean(x))^2))) #SE di b
+
+#Test di verifica di ipotesi su b
+b = as.numeric(modello$coefficients[2])
+testT = b/seb #test
+pvalue = 2*pt(testT,length(y)-2,lower.tail=FALSE) #pvalue
+quanT = qt(0.025,length(y)-2,lower.tail=FALSE) #quantile
+c(b-(seb*quanT), " < b < ", b+(seb*quanT)) #intervallo di confidenza, dove è contenuto 0.8
+
+# Modello di regressione lineare ycen = a + b(xcen)
+xcen = x - mean(x)
+ycen = y - mean(y)
+modello2 = lm(ycen ~ xcen) #modello di regressione lineare
+summary(modello2)
+alpha1 = as.numeric(modello$coefficients[1]); alpha2 = as.numeric(modello2$coefficients[1]) #calcolo di a dei due modelli
+beta1 = as.numeric(modello$coefficients[2]); beta2 = as.numeric(modello2$coefficients[2]) #calcolo di b dei due modelli
+cbind(rbind(alpha1, beta1),rbind(alpha2, beta2)) #mostro i risultati a video
+
+
+
+# ESERCIZIO 2 ---------------------------
+
+# Introduzione
+df2 = read.csv("/Users/marcocaurla/Documents/Informatica/DSL/R/ANNO\ 2/ESERCITAZIONE\ FINALE/homework\ SPEI\ a.a.\ 2023-2024/2004\ statewide\ crime.txt", header = TRUE)
+
+# Modello di regressione multipla
+#y = tasso di omicidi; x1 = tasso di povertà; x2 = diplomati all'high school
+y = df2$Murder; x1 = df2$Poverty; x2 = df2$HighSch
+pairs(cbind(y,x1,x2)) #mostro su dei grafici le tre variabili
+lm2 = lm(y ~ x1 + x2) #modello di regressione lineare multivariato
+summary(lm2)
+#Partial regression plot controllando per x2
+lmy = lm(y ~ x2)
+lmx1 = lm(x1 ~ x2)
+par(mfrow = c(1,2))
+colors = rep("black", length(y)); colors[51] = "red"
+plot(lmx1$res, lmy$res, xlab = "Redisui del modello 'tasso di povertà' regredito su 
+     'percentuale di diplomati'",
+     ylab = "Residui del modello 'tasso di omicidi' regredito su 'percentuale di diplomati'",
+     main = "Partial regression plot controllando 
+     per la percentuale di diplomati", col = colors)
+abline(lm(lmy$res ~ lmx1$res)) #aggiungo la retta di regressione
+text(lmx1$residuals[51],lmy$residuals[51]-2, labels = "DC") #aggiungo l'etichetta al dato del DC
+#Partial regression plot controllando per x1
+lmyy = lm(y ~ x1)
+lmx2 = lm(x2 ~ x1)
+plot(lmx2$res, lmyy$res, xlab = "Redisui del modello 'percentuale di diplomati'
+regredito su 'tasso di povertà'",
+     ylab = "Residui del modello 'tasso di omicidi' regredito su 'tasso di povertà'",
+     main = "Partial regression plot controllando 
+     per il tasso di povertà", col = colors)
+abline(lm(lmyy$res ~ lmx2$res)) #aggiungo la retta di regressione
+text(lmx2$residuals[51],lmyy$residuals[51]-2, labels = "DC") #aggiungo l'etichetta al dato del DC (Distretto Columbia)
+par(mfrow = c(1,1))
+#Commento: il grafico a sinistra rappresenta la relazione tra il tasso di omicidi e il
+#tasso di povertà esludendo gli effetti della percentuale di diplomati, mentre
+#il grafico di destra rappresenta la relazione tra la percentuale di diplomati e il tasso
+#di povertà escludendo gli effetti del tasso di povertà.
+#Si può concludere che il tasso di omicidio e il tasso di povertà hanno una
+#correlaazione maggiore di quella che hanno il tasso di omicidi e la percentuale di diplomati
+#Inoltre, in entrambi i casi emerge come il Distretto della Columbia (in rosso) sia un outlier
+
+#Analisi del modello di regressione multipla
+summary(lm2)
+alpha = as.numeric(lm2$coefficients[1]); beta1 = as.numeric(lm2$coefficients[2]);
+beta2 = as.numeric(lm2$coefficients[3])
+cbind(alpha, beta1, beta2)
+#Commento: per ogni incremento unitario del tasso di povertà, il tasso di omicidi medio aumenta di 1.6.
+#Per ogni incremento unitario della percentuale di diplomati, il tasso di omicidio medio aumenta di 0.58
+#È strano questo ultimo risultato ottenuto perchè ci si aspetterebbe che all'aumentare del livello di scolarizzazione, il tasso di omicidio
+#cali. Inoltre, è anche strano vedere che il tasso di omicidi aumenti più che proporzionalmente al tasso di povertà (vorrebbe dire che per
+#ogni punto percentuale del tasso di povertà in più ci sono 1.6 omicidi in più).
+#Per questo motivo si stima nuovamente il modello con l'esclusione del dato del District of Columbia che sembra essere un outlier
+
+# Modello di regressione multipla con l'esclusione del dato del DC
+NoDC = df2$Murder<df2$Murder[51]
+yNoDC = df2$Murder[NoDC]; x1NoDC = df2$Poverty[NoDC]; x2NoDC = df2$HighSch[NoDC]
+lm2NoDC = lm(yNoDC ~ x1NoDC + x2NoDC) #modello di regressione lineare multivariato (senza DC)
+summary(lm2NoDC)
+#Analisi del modello di regressione multipla (senza DC)
+summary(lm2NoDC)
+alphaNoDC = as.numeric(lm2NoDC$coefficients[1]); beta1NoDC =
+  as.numeric(lm2NoDC$coefficients[2]); beta2NoDC =
+  as.numeric(lm2NoDC$coefficients[3])
+rbind(cbind("Intercetta","b - tasso di povertà senza DC", "b - tasso di diplomati senza
+DC"),cbind(as.numeric(alphaNoDC), as.numeric(beta1NoDC),
+           as.numeric(beta2NoDC)))
+#Commento: In questo caso i dati sembrano più ragionevoli, in quanto all'aumentare di una unità del tasso di povertà, la media del tasso di omicidio
+#aumenta di 0.30 (meno che proporzionale), mentre all'aumentare del tasso di scolarizzazione diminuisce il tasso di omicidi medio (b = - 0.19)
+#L'intercetta alpha (18.91) rappresenta il tasso di omicidi frizionale, ovvero il tasso di omicidi registrato nella società quando il tasso di povertà è nullo, ma anche la percentuale di diplomati all'high school
+
+# Riassunto dei quattro partial regression plot
+par(mfrow = c(2,2))
+#Partial regression plot con DC
+plot(lmx1$res, lmy$res, xlab = "Redisui del modello 'tasso di povertà' regredito su 
+     'percentuale di diplomati'",
+     ylab = "Residui del modello 'tasso di omicidi' 
+     regredito su 'percentuale di diplomati'",
+     main = "Partial regression plot controllando 
+     per la percentuale di diplomati", col = colors)
+abline(lm(lmy$res ~ lmx1$res)) #aggiungo la retta di regressione
+text(lmx1$residuals[51],lmy$residuals[51]-2, labels = "DC") #aggiungo l'etichetta al dato del DC
+plot(lmx2$res, lmyy$res, xlab = "Redisui del modello 'percentuale di diplomati'
+     regredito su 'tasso di povertà'",
+     ylab = "Residui del modello 'tasso di omicidi' 
+     regredito su 'tasso di povertà'",
+     main = "Partial regression plot controllando 
+     per il tasso di povertà", col = colors)
+abline(lm(lmyy$res ~ lmx2$res)) #aggiungo la retta di regressione
+text(lmx2$residuals[51],lmyy$residuals[51]-2, labels = "DC") #aggiungo l'etichetta al dato del DC
+#Partial regression plot senza DC
+lmyNoDC = lm(yNoDC ~ x2NoDC)
+lmx1NoDC = lm(x1NoDC ~ x2NoDC)
+plot(lmx1NoDC$res, lmyNoDC$res, xlab = "Redisui del modello 'tasso di povertà'
+regredito su 'percentuale di diplomati'",
+     ylab = "Residui del modello 'tasso di omicidi'
+     regredito su 'percentuale di diplomati'",
+     main = "Partial regression plot controllando per 
+     la percentuale di diplomati (senza DC)")
+abline(lm(lmyNoDC$res ~ lmx1NoDC$res)) #aggiungo la retta di regressione
+lmyyNoDC = lm(yNoDC ~ x1NoDC)
+lmx2NoDC = lm(x2NoDC ~ x1NoDC)
+plot(lmx2NoDC$res, lmyyNoDC$res, xlab = "Redisui del modello 'percentuale di diplomati' 
+     regredito su 'tasso di povertà'",
+     ylab = "Residui del modello 'tasso di omicidi' 
+     regredito su 'tasso di povertà'",
+     main = "Partial regression plot controllando 
+     per il tasso di povertà (senza DC)")
+abline(lm(lmyyNoDC$res ~ lmx2NoDC$res)) #aggiungo la retta di regressione
+par(mfrow = c(1,1))
+#Commento: dall'analisi dei partial regression plot senza l'outlier DC si nota che la relazione tra tasso di povertà e tasso di omicidi non è così forte
+#come sembrava inzialmente (includendo DC), mentre la relazione tra tasso di omicidi e percentuali di diplomati all'high school è pressoché costante con o senza il dato
+#del Distretto della Columbia in valore nominale, ma cambia di segno.
+
+
+
+
+# ESERCIZIO 3 -------
+# Svolgimento esercizio 30 -----
+df <- read.table("/Users/marcocaurla/Documents/Informatica/DSL/R/ANNO\ 2/ESERCITAZIONE\ FINALE/homework\ SPEI\ a.a.\ 2023-2024/lavoro.txt", header=TRUE, sep="\t")
+
+#Regressione di y (average_score) su x1 (sex) e x2 (years_service)
+avgPunteggio = df$Average_Score; sex = df$Sex; AnniLavoro = df$Years_Service; race = df$Race; #dichiaro le variabili
+fit30 = lm(avgPunteggio ~ sex + AnniLavoro); summary(fit30) #modello di regressione lineare
+yTeorica = df$Average_Score; yPrevista = fit30$fitted.values
+cor(yTeorica, yPrevista); plot(yTeorica, yPrevista) #correlazione multipla del modello
+#Commento: la correlazione elevata (che si nota anche dal grafico) evidenzia come il modello di regressione lineare stimato (fit30) sia un buon stimatore della variabile y = punteggio medio
+
+#Test globale di indipendenza H0: bSex = bAnniLavoro = 0
+(statisticaF = as.numeric(summary(fit30)$fstatistic[1]))
+qf(0.05, 2, length(sex)-2-1, lower.tail = FALSE) #valore critico
+pf(statisticaF, 2, length(sex)-2-1, lower.tail = FALSE) #pvalue (calcolato "a mano")
+#Rifiuto H0: bSex = bAnniLavoro = 0, quindi almeno uno tra bSex e bAnniLavoro è diverso da 0
+#Test H0: bSex = 0 e test H0: bAnniLavoro = 0
+(testTsex = summary(fit30)$coefficients[8]); (testAnnilavoro = summary(fit30)$coefficients[9])
+qt(0.025, length(sex)-2-1, lower.tail = FALSE) #valore critico
+(pvalueSex = summary(fit30)$coefficients[11]); (pvalueAnniLavoro = summary(fit30)$coefficients[12])
+#rifiuto H0: bSex = 0; H0: bAnniLavoro = 0 perchè testTsex < -ValoreCritico e testAnnilavoro > ValoreCritico (e entrambi hanno un pvalue prossimo allo 0)
+#Commento: Il coordinatore può usare gli anni di lavoro e il sesso del dipendente per stimare il punteggio medio
+
+# Rappresentazione grafica dei dati -----
+#Regressione di y (average_score) su x1 (sex), x2 (years_service) e x3 (race)
+fit3 = lm(avgPunteggio ~ sex + AnniLavoro + race); summary(fit3) #modello di regressione lineare
+
+#Rappresentazione grafica con scatter plot
+#Gestione dei colori: le donne sono in rosa, gli uomini in blu
+colors = rep(NA, length(df$Employee)) #vettore dei colori
+counterS = 1 #contatore per ciclo while
+#ciclo while per assegnare i colori
+while(counterS <= length(df$Employee)){
+  if(sex[counterS] == "Male"){
+    colors[counterS] = "blue"
+    counterS = counterS + 1
+  } else {
+    colors[counterS] = "red"
+    counterS = counterS + 1
+  }
+}
+#Gestione dei punti: i bianchi sono rappresentati da dei triangoli, i non bianchi sono da dei cerchi
+point = rep(NA, length(df$Employee)) #vettore dei colori
+counterR = 1 #contatore per ciclo while
+#ciclo while per assegnare i colori
+while(counterR <= length(df$Employee)){
+  if(race[counterR] == "White"){
+    point[counterR] = 2 #2 è il codice per il triangoli
+    counterR = counterR + 1
+  } else {
+    point[counterR] = 1 #1 è il codice del cerchio
+    counterR = counterR + 1
+  }
+}
+#Grafico (con legenda):
+plot(df$Employee, avgPunteggio, pch = point, col = colors, xlab = "Codice dell'impiegato", ylab = "Punteggio medio")
+legend("bottomleft", legend = c("Maschi - bianchi", "Maschi - non bianchi", "Femmine - bianche", "Femmine - non bianche"), col = c("blue", "blue", "red", "red"), pch = c(2, 1, 2, 1), bty = "n")
+#Commento: dal grafico si evince come le donne abbiano ottenuto un punteggio medio maggiore di quello degli uomini. 
+#Nel gruppo delle donne non si nota nessuna associazione palese tra la razza e il punteggio medio, 
+#mentre nel tra gli uomini si vede facilmente come i maschi bianchi abbiano ottenuto un punteggio medio maggiore dei maschi non bianchi
+
+#Rappresentazione grafica con includendo anche gli anni di servizio
+#Coloro i punti
+#Masch bianchi: blu; maschi non bianchi: neri; femmine bianche = rosso; femmine non bianche: nere
+pointAS = rep(NA, length(df$Employee)) #vettore dei colori
+counterAS = 1 #contatore per ciclo while
+#ciclo while per assegnare i colori
+while(counterAS <= length(df$Employee)){
+  if(sex[counterAS] == "Male" & race[counterAS] == "White"){
+    pointAS[counterAS] = "blue"
+    counterAS = counterAS + 1
+  } else {
+    if(sex[counterAS] == "Male" & race[counterAS] == "Nonwhite"){
+      pointAS[counterAS] = "black"
+      counterAS = counterAS + 1
+    } else {
+      if(sex[counterAS] == "Female" & race[counterAS] == "White"){
+        pointAS[counterAS] = "red"
+        counterAS = counterAS + 1
+      } else {
+        if(sex[counterAS] == "Female" & race[counterAS] == "Nonwhite"){
+          pointAS[counterAS] = "green"
+          counterAS = counterAS + 1
+        } else {
+          pointAS[counterAS] = NA
+          counterAS = counterAS + 1
+        }
+      }
+    }
+  }
+}
+plot(AnniLavoro, avgPunteggio, xlab="Anni di servizio", ylab="Punteggio medio", col = pointAS)
+#Salvo i coefficienti in variabili per comodità
+a = as.numeric(fit3$coeff[1]); bSex = as.numeric(fit3$coeff[2]); bAS = as.numeric(fit3$coeff[3]); bRace = as.numeric(fit3$coeff[4])
+#Aggiungo le rette di regressione parziale, controllando per sesso e razza
+maschio = bSex*1; femmina = bSex*0; bianco = bRace*1; nonbianco = bRace*0
+abline(a+maschio+bianco, bAS, col = "blue") #maschi bianchi
+abline(a+maschio+nonbianco, bAS, col = "black") #maschi non bianchi
+abline(a+femmina+bianco, bAS, col = "red") #femmine bianche
+abline(a+femmina+nonbianco, bAS, col = "green") #femmine non bianche
+legend("bottomright", legend = c("Maschi - bianchi", "Maschi - non bianchi", "Femmine - bianche", "Femmine - non bianche"), col = c("blue", "black", "red", "green"), bty = "n", lwd = 1, pch = 1)
+#Si nota che la relazione tra anni di servizio e punteggio medio sia crescente.
+#Inoltre, si confermano le intuizioni di prima, ovvero che i maschi bianchi hanno un punteggio superiore a quello dei maschi non bianchi e che
+#le donne registrano, per ogni livello di razza, un punteggio medio superiore.
+#Da questo grafico è anche possibile trarre delle conclusioni sul gruppo femminile: le donne bianche hanno un punteggio medio maggiore di quello di tutte le altre categorie
+
+# Analisi dell'interazione ----
+#Regressione di y (average_score) su x1 (sex), x2 (years_service) e x3 (race), consideraziondo l'interazione x2x1 e x2x3
+fit3.1 = lm(avgPunteggio ~ sex + AnniLavoro + race + AnniLavoro*sex + AnniLavoro*race); summary(fit3.1) #modello di regressione lineare
+#In automatico R mi imposta male = 1, female = 0 e white = 1, non white = 0
+
+#testF
+anova(fit3, fit3.1)
+testX3 = anova(fit3, fit3.1)$F[2]; pValueX3 = anova(fit3, fit3.1)$`Pr(>F)`[2] #Valore del test e del pvalue
+cbind(testX3, pValueX3)
+#Non ci sono abbastanza evidenze statistiche per rifiutare H0: b interazione annilavoro*sex = 0
+#Dal test globale di indipendenza si evince quindi che il modello con le interazioni non siano significative
+
+#Prendo il valore della statistica test t e il p-value della stima di b per le due interpolazioni
+tAS = summary(fit3.1)$coeff[17]; pAS = summary(fit3.1)$coeff[23]
+tAR = summary(fit3.1)$coeff[18]; pAR = summary(fit3.1)$coeff[24]
+#Risultato del test (facendo riferimento alla statistica test t)
+ValoreCritico = qt(0.025, length(AnniLavoro)-5-1, lower.tail = FALSE)
+cbind(tAS,pAS,tAR,pAR,ValoreCritico) #tabella riassuntila
+if(tAS < ValoreCritico | tAS > -ValoreCritico){
+  print("Risultato test su b di anni di lavoro-sesso: non ci sono abbastanza evidenze statistiche per rifiutare H0: bAS = 0, quindi l'interpolazione tra anni di lavoro e sesso non è statisticamente significativa (livello di significativà al 5%)")
+} else {
+  print("Risultato test su b di anni di lavoro-sesso: si rifiuta H0: bAS = 0, quindi l'interpolazione tra anni di lavoro e sesso è statisticamente significativa (livello di significativà al 5%)")
+}
+if(tAR < ValoreCritico | tAR > -ValoreCritico){
+  print("Risultato test su b di anni di lavoro-sesso: non ci sono abbastanza evidenze statistiche per rifiutare H0: bAR = 0, quindi l'interpolazione tra anni di lavoro e razza non è statisticamente significativa (livello di significativà al 5%)")
+} else {
+  print("Risultato test su b di anni di lavoro-sesso: si rifiuta H0: bAR = 0, quindi l'interpolazione tra anni di lavoro e razza è statisticamente significativa (livello di significativà al 5%)")
+}
+
+summary(fit3) #Modello senza le due interpolazioni non significative
+
+# Grafici di diagnostica del modello ----
+#imposto per il sesso male = 1 e female = o
+i = 1; sex.num = rep(NA, length(sex))
+while(i <= length(sex)){
+  if(sex[i] == "Male"){
+    sex.num[i] = 1
+    i = i+1
+  } else {
+    sex.num[i] = 0
+    i = i+1
+  }
+}
+#imposto per la razza white = 1 e non white = o
+j = 1; race.num = rep(NA, length(race))
+while(j <= length(race)){
+  if(race[j] == "White"){
+    race.num[j] = 1
+    j = j+1
+  } else {
+    race.num[j] = 0
+    j = j+1
+  }
+}
+pairs(cbind(avgPunteggio, AnniLavoro, sex.num, race.num)) #riporto le relazioni sul grafico 2 a 2
+cor(cbind(avgPunteggio, AnniLavoro, sex.num, race.num)) #calcolo le correlazioni tra le variabili 2 a 2
+#Commento: dall'analisi dei grafici e della matrice delle correlazioni si evince come ci sia una correlazione negativa elevata tra il punteggio
+#medio e il sesso, ovvero il punteggio medio aumenta quando il sesso passa da 1 a 0, quindi da maschi a femmine (evidenza già riscontrata nel grafico precedente)
+#Inoltre, tra il punteggio medio è correlato positivamente a circa 0.6 con gli anni di lavoro. Le altre variabili hanno una correlazione bassa
+
+
+
+
+
+# ESERCIZIO 4 ----
+# Introduzione ----
+#Obiettivo: verificare se il valore della merce consegnata corrisponda effettivamente a quello dichiarato
+#$prima = merce di prima caterogia (1) o di seconda categoria (0)
+#$ExtraUE = merce che arriva da extraUE (1) o no (0)
+#$dichiarato = valore dichiarato del lotto
+#$irr = 1 se il valore si discosta da quello dichiarato e 0 se è lo stesso
+
+df4 = read.csv("/Users/marcocaurla/Documents/Informatica/DSL/R/ANNO\ 2/ESERCITAZIONE\ FINALE/homework\ SPEI\ a.a.\ 2023-2024/dati_controlli.csv",header=TRUE)
+lotto = df4$lotto; qualità = df4$prima; origine = df4$ExtraUE; valoreD = df4$dichiarato; esitoControllo = df4$Irr
+
+# Relaione tra la variabile Irr (esitoControllo) e le variabili esplicative della merce ----
+logit4 = glm(esitoControllo ~ qualità + origine + valoreD, family = binomial); summary(logit4) 
+
+# Probabilità che un lotto proveniente da UE (origine = 0), con qualità = 1 e valoreD = 200€ sia irregolare (esitoControllo = 1) ----
+(lnOdds4 = as.numeric(logit4$coefficients[1]) + (as.numeric(logit4$coefficients[2])*1) + (as.numeric(logit4$coefficients[3])*0) + (as.numeric(logit4$coefficients[4])*200))
+(p4 = exp(lnOdds4)/(1+exp(lnOdds4))) #P(esitoControllo = 1 | qualità = 1, origine = 0, valoreD = 200)
+
+# Modello logistico che considera anche l'interazione tra qualità e origine ----
+logit4.1 = glm(esitoControllo ~ qualità + origine + valoreD + qualità*origine, family = binomial); summary(logit4.1) 
+#Test del rapporto delle verosomiglianze
+anova(logit4, logit4.1, test = "Chisq")
+testX4 = anova(logit4, logit4.1, test = "Chisq")$Deviance[2]; pValueX4 =anova(logit4, logit4.1, test = "Chisq")$`Pr(>Chi)`[2] #Valore del test e del pvalue
+cbind(testX4, pValueX4)
+#Si conclude quindi che è preferibile il modello con l'interazione, dato che test LR = 5.003 con pvalue = 0.025 (-> rifiuto H0: b interazione = 0)
+
+#Tabella riassuntiva
+cbind(rbind("Nome variabile", "Qualità","Origine","Valore dichiarato","Interazione qualità*origine"),
+      rbind("b",as.numeric(logit4.1$coefficients[2]),as.numeric(logit4.1$coefficients[3]),as.numeric(logit4.1$coefficients[4]),as.numeric(logit4.1$coefficients[5])),
+      rbind("exp(b)",as.numeric(exp(logit4.1$coefficients[2])),as.numeric(exp(logit4.1$coefficients[3])),as.numeric(exp(logit4.1$coefficients[4])),as.numeric(exp(logit4.1$coefficients[5]))),
+      rbind("p-value",as.numeric(summary(logit4.1)$coefficients[17]),as.numeric(summary(logit4.1)$coefficients[18]),as.numeric(summary(logit4.1)$coefficients[19]),as.numeric(summary(logit4.1)$coefficients[20])))
+#Analizzando i dati, un consiglio utile agli addetti sarebbe quello di controllare con maggiore attenzionele merci con un alto valore dichiarato, dato che per ogni incremento unitario
+#del valore dichiarato, l'odds ratio stimato aumenta di 0.98, ovvero aumenta la probabilità che Irr = 1 (aumenta il numeratore dell'odds, diminuisce il denominatore)
+#Non è significativa invece la provenienza del lotto, dato il pvalue > 0.05 che porta a non rifiutare H0: b-origine = 0.
+#In secondo luogo gli addetti dovrebbero controllare anche la qualità della merce di prima qualità, dato che per ogni incremento unitario della variabile "prima" (quidni passa da 0 a 1)
+#l'odds ratio aumenta di 0.34. 
+#Inoltre, dall'analisi di b per l'interpolazione qualità*origine (b = 1.499) si può concludere che se si controlla per l'origine e la qualità contemporanemte
+#la probabilità che il valore si discosti da quello dichiarato è quasi del 50%.
+#In conclusione si consiglia agli addetti di fare maggiore attenzione ai lotti con alto valore dichiarato e quelli di prima qualità
+
+
+
+
+
+
+# ESERCIZIO 5 -----
+
+# Introduzione ------------------------------------------------------------
+#Mi creo due database in xlsx per importare i dati
+m = read_xlsx("/Users/marcocaurla/Documents/Informatica/DSL/R/ANNO\ 2/ESERCITAZIONE\ FINALE/homework\ SPEI\ a.a.\ 2023-2024/COVID\ -\ maschi.xlsx")
+f = read_xlsx("/Users/marcocaurla/Documents/Informatica/DSL/R/ANNO\ 2/ESERCITAZIONE\ FINALE/homework\ SPEI\ a.a.\ 2023-2024/COVID\ -\ femmine.xlsx")
+
+#Creo i vettori per la distribuzione dell'età per il numero dei casi e dei morti di ogni sesso
+i=2; sex=m;
+mMorti = as.numeric(c(rep(sex[1,1],sex[1,i]),rep(sex[2,1],sex[2,i]),rep(sex[3,1],sex[3,i]),rep(sex[4,1],sex[4,i]),rep(sex[5,1],sex[5,i]),
+                      rep(sex[6,1],sex[6,i]),rep(sex[7,1],sex[7,i]),rep(sex[8,1],sex[8,i]),rep(sex[9,1],sex[9,i]),rep(sex[10,1],sex[10,i])))
+sex=f
+fMorti = as.numeric(c(rep(sex[1,1],sex[1,i]),rep(sex[2,1],sex[2,i]),rep(sex[3,1],sex[3,i]),rep(sex[4,1],sex[4,i]),rep(sex[5,1],sex[5,i]),
+                      rep(sex[6,1],sex[6,i]),rep(sex[7,1],sex[7,i]),rep(sex[8,1],sex[8,i]),rep(sex[9,1],sex[9,i]),rep(sex[10,1],sex[10,i])))
+sex=m
+i = 3
+mCasi = as.numeric(c(rep(sex[1,1],sex[1,i]),rep(sex[2,1],sex[2,i]),rep(sex[3,1],sex[3,i]),rep(sex[4,1],sex[4,i]),rep(sex[5,1],sex[5,i]),
+                     rep(sex[6,1],sex[6,i]),rep(sex[7,1],sex[7,i]),rep(sex[8,1],sex[8,i]),rep(sex[9,1],sex[9,i]),rep(sex[10,1],sex[10,i])))
+sex=f
+fCasi = as.numeric(c(rep(sex[1,1],sex[1,i]),rep(sex[2,1],sex[2,i]),rep(sex[3,1],sex[3,i]),rep(sex[4,1],sex[4,i]),rep(sex[5,1],sex[5,i]),
+                     rep(sex[6,1],sex[6,i]),rep(sex[7,1],sex[7,i]),rep(sex[8,1],sex[8,i]),rep(sex[9,1],sex[9,i]),rep(sex[10,1],sex[10,i])))
+RiassuntoFemmine = cbind(table(fMorti),table(fCasi)); colnames(RiassuntoFemmine) <- c("Morti","Casi"); RiassuntoFemmine
+RiassuntoMaschi = cbind(table(mMorti),table(mCasi)); colnames(RiassuntoMaschi) <- c("Morti","Casi"); RiassuntoMaschi
+
+
+# Test sulla letalità maschi (1) - femmine (2) ----------------------------
+#H0: p1 - p2 = 0; alpha = 0.05
+p1 = m[11,2]; p2 = f[11,2] #successi maschi e femmine
+n1 = m[11,3]; n2 = f[11,3] #popolazione maschi e femmine
+#se = sqrt(((p1*(1-p1))/n1)+((p2*(1-p2))/n2))
+(test = prop.test(c(p1,p2),c(n1,n2),correct=FALSE, conf = 0.95)) #test sotto H0: p1-p2 = 0
+test$conf.int #Intervallo di confidenza al 95%
+#Commento: si conclude che p1 è diversa da p2 (al 95%) dato che il test riporta un p-value basso (bassa probabilità di
+#trovare un valore più estremo di quello osservato). A supporto di ciò, l'intervallo di confidenza non contiene lo zero,
+#quindi p1 - p1 != 0
+
+# Test sull'età media al contagio -----------------------------------------
+#Calcolo media dell'età al contagio e della sua varianza
+mimc = mean(mCasi); mifc = mean(fCasi)
+t.test(mCasi, fCasi) #test t con H0: mimc = mifc
+t.test(mCasi, fCasi)$conf.int #intervallo di confidenza al 95%
+#Commento: il test eseguito porta a rifiutare l'ipotesi nulla mimc = mifc con una confidenza del 95%. 
+#Questo lo si evince dal bassissimo valore del p-value (0) e dal fatto che l'intervallo di confidenza non contiene lo zero.
+
+# Test sull'età media al decesso ------------------------------------------
+#Calcolo media dell'età al contagio e della sua varianza
+mimm = mean(mMorti); mifm = mean(fMorti)
+t.test(mMorti, fMorti) #test t con H0: mimm = mifm
+t.test(mMorti, fMorti)$conf.int #intervallo di confidenza al 95%
+#Commento: il test eseguito porta a rifiutare l'ipotesi nulla mimm = mifm con una confidenza del 95%. 
+#Questo lo si evince dal bassissimo valore del p-value (ca. 0) e dal fatto che l'intervallo di confidenza non contiene lo zero.
+
+# Analisi per sesso dell'età al contagio ----------------------------------
+#Funzione per calcolare l'indice di Cramer
+vCramer = function(TabellaDiContingenza, NumeroDiOsservazioni){
+  test = chisq.test(TabellaDiContingenza)
+  chiquadro = as.numeric(test$statistic)
+  riga = nrow(TabellaDiContingenza)-1
+  colonna = ncol(TabellaDiContingenza)-1
+  numeratore = (chiquadro)/NumeroDiOsservazioni
+  denominatore = min(riga,colonna)
+  sqrt(numeratore/denominatore)
+}
+
+#Il fenomeno del contagio è, a livello di popolazione, lo stesso nelle diverse classi di età?
+TabContagi = rbind(table(mCasi),table(fCasi)); rownames(TabContagi) <- c("Maschi","Femmine"); TabContagi
+chisq.test(TabContagi) #test H0: c'è indipendenza
+vCramer(TabContagi,sum(m[11,3],f[11,3])) #calcolo l'indice di Cramer con la mia funzione
+library(DescTools); CramerV(TabContagi) #calcolo dell'indice di Cramer con il pacchetto DescTools (per verificare i risultati)
+#Commento: il test eseguito porta a rifiutare l'ipotesi nulla: non c'è indipendenza
+#Questo lo si evince dal bassissimo valore del p-value (ca. 0) e dall'elevato valore della statistica test X-sqared.
+cM = as.numeric(TabContagi[1,]); cF = as.numeric(TabContagi[2,]); età = c(5, 15, 25, 35, 45, 55, 65, 75, 85, 95)
+par(mfrow = c(1,2))
+plot(età, cM, main = "Età al contagio per classi di età - maschi"); plot (età, cF, main = "Età al contagio per classi di età - femmine")
+par(mfrow = c(1,1))
+#Si può concludere quindi che l'età al contagio è maggiore per le classi di età più giovani  (per entrambi i sessi)
+
+# Analisi per sesso dell'età al decesso -----------------------------------
+#Il fenomeno del decesso è, a livello di popolazione, lo stesso nelle diverse classi di età?
+TabMorti = rbind(table(mMorti),table(fMorti)); rownames(TabMorti) <- c("Maschi","Femmine"); TabMorti
+chisq.test(TabMorti) #test H0: c'è indipendenza
+vCramer(TabMorti, sum(m[11,2],f[11,2])) #calcolo l'indice di Cramer con la mia funzione
+CramerV(TabMorti) #calcolo dell'indice di Cramer con il pacchetto DescTools per verificare i risultati
+#Commento: il test eseguito porta a rifiutare l'ipotesi nulla: non c'è indipendenza
+#Questo lo si evince dal bassissimo valore del p-value (ca. 0) e dall'elevato valore della statistica test X-squared.
+mM = as.numeric(TabMorti[1,]); mF = as.numeric(TabMorti[2,])
+par(mfrow = c(1,2))
+plot(età, mM, main = "Età al decesso per classi di età - maschi"); plot (età, mF, main = "Età al decesso per classi di età - femmine")
+par(mfrow = c(1,1))
+#Si può concludere quindi che il numero di morti aumenta all'aumentare dell'età  (per entrambi i sessi)
